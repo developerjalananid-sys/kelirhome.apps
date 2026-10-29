@@ -1680,9 +1680,9 @@ function renderDashboardMedia() {
   const M = APP.dashMedia || {};
   const hdr = document.getElementById('dashHeaderImage');
   if (hdr) {
-    hdr.innerHTML = M.headerImage
+    hdr.innerHTML = (M.headerImage && /^(https?:\/\/|data:image\/(png|jpeg);base64,)/i.test(M.headerImage))
       ? '<img src="' + escapeHtml(M.headerImage) + '" alt="Header" style="display:block;width:100%;max-height:260px;object-fit:cover;border-radius:12px;">'
-      : dashboardMediaPlaceholder('🖼️', 'Gambar Header', 'Atur link gambar di Pengaturan › Logo &amp; Konten Dashboard (disarankan 1600×400 px)');
+      : dashboardMediaPlaceholder('🖼️', 'Gambar Header', 'Upload gambar di Pengaturan › Logo &amp; Konten Dashboard (disarankan lebar 1600 px)');
   }
   const yt = document.getElementById('dashYoutube');
   if (yt) {
@@ -1693,7 +1693,7 @@ function renderDashboardMedia() {
   }
   const mp = document.getElementById('dashMaps');
   if (mp) {
-    const u = mapsEmbedUrl(M.maps);
+    const u = M.mapsEmbed || mapsEmbedUrl(M.maps);
     mp.innerHTML = u
       ? '<iframe src="' + escapeHtml(u) + '" title="Google Maps" style="width:100%;height:320px;border:0;border-radius:10px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>'
       : dashboardMediaPlaceholder('📍', 'Lokasi Google Maps', 'Isi alamat / link embed di Pengaturan › Logo &amp; Konten Dashboard');
@@ -3973,6 +3973,8 @@ function renderBrandingForm(settings) {
   BR_STATE.logo = isValidLogo(settings.app_logo) ? settings.app_logo : '';
   BR_STATE.changed = false;
   BR_STATE.src = null;
+  BR_STATE.header = isValidLogo(settings.header_image_data) ? settings.header_image_data : '';
+  BR_STATE.headerChanged = false;
   const v = k => escapeHtml(settings[k] || '');
   el.innerHTML = `
     <div class="datagrid-toolbar">
@@ -3995,7 +3997,14 @@ function renderBrandingForm(settings) {
       <p class="text-xs text-muted mt-8">Logo dipakai di panel login, menu samping, dan ikon tab/taskbar browser. Ikon shortcut aplikasi yang sudah di-install (PWA) mengikuti file ikon di hosting: unduh "Paket Ikon", ganti file di folder <b>icons/</b>, lalu install ulang aplikasinya.</p>
       <h4 style="margin:20px 0 10px;">Konten Dashboard</h4>
       <div class="br-grid">
-        <div class="form-group full"><label>Gambar Header (link gambar)</label><input type="text" id="brHeader" value="${v('dash_header_image')}" placeholder="https://.../header.jpg"></div>
+        <div class="form-group full"><label>Gambar Header (upload PNG / JPG)</label>
+          <div id="brHeaderPreview" style="border:2px dashed var(--border);border-radius:12px;background:var(--bg);min-height:90px;display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--text-light);font-size:13px;"></div>
+          <div class="flex gap-8 flex-wrap mt-8" style="align-items:center;">
+            <input type="file" id="brHeaderFile" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="onHeaderFileChosen(this)" style="max-width:320px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="removeHeaderImage()">🗑 Hapus Gambar</button>
+          </div>
+          <div class="text-xs text-muted mt-8">Disarankan lebar minimal 1600 px (rasio sekitar 4:1). Otomatis diperkecil &amp; dikompres agar muat disimpan.</div>
+        </div>
         <div class="form-group full"><label>Video YouTube (paste link)</label><input type="text" id="brYoutube" value="${v('dash_youtube')}" placeholder="https://www.youtube.com/watch?v=..."></div>
         <div class="form-group full"><label>Google Maps (alamat, link embed, atau kode iframe)</label><textarea id="brMaps" placeholder="GBI Keluarga Imamat Rajani Tenggarong">${v('dash_maps')}</textarea></div>
         <div class="form-group"><label>Instagram (link profil)</label><input type="text" id="brInstagram" value="${v('dash_instagram')}" placeholder="https://instagram.com/..."></div>
@@ -4007,6 +4016,7 @@ function renderBrandingForm(settings) {
       <div id="brError" class="error-message" style="margin-top:8px;"></div>
     </div>`;
   renderLogoPreview();
+  renderHeaderPreview();
 }
 
 function renderLogoPreview() {
@@ -4016,6 +4026,60 @@ function renderLogoPreview() {
 }
 
 // Memperkecil gambar ke persegi dan mencari ukuran/format yang muat di batas sel Google Sheets.
+function renderHeaderPreview() {
+  const box = document.getElementById('brHeaderPreview');
+  if (!box) return;
+  box.innerHTML = BR_STATE.header ? '<img src="' + BR_STATE.header + '" alt="Header" style="display:block;width:100%;max-height:200px;object-fit:cover;">' : 'Belum ada gambar header';
+}
+
+// Header: skala ke lebar <=1600 px lalu kompres JPEG bertahap sampai muat (<=190.000 karakter).
+function headerToDataUrl(img) {
+  const widths = [1600, 1280, 1024, 800, 640];
+  const qualities = [0.85, 0.75, 0.65, 0.55, 0.45];
+  for (const maxW of widths) {
+    let w = Math.min(img.width, maxW);
+    let h = Math.round(img.height * w / img.width);
+    if (h > 600) { h = 600; w = Math.round(img.width * h / img.height); }
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    for (const q of qualities) {
+      const url = c.toDataURL('image/jpeg', q);
+      if (url.length <= 190000) return url;
+    }
+  }
+  return '';
+}
+
+function onHeaderFileChosen(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (!/^image\/(png|jpeg)$/.test(f.type)) { input.value = ''; showToast('Gambar header harus berformat PNG atau JPG.', 'error'); return; }
+  if (f.size > 15 * 1024 * 1024) { input.value = ''; showToast('Ukuran file terlalu besar (maks 15 MB).', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const url = headerToDataUrl(img);
+      if (!url) { showToast('Gambar terlalu kompleks untuk disimpan. Pilih gambar lain.', 'error'); return; }
+      BR_STATE.header = url; BR_STATE.headerChanged = true;
+      renderHeaderPreview();
+      showToast('Gambar header siap. Klik Simpan untuk menerapkan.', 'info');
+    };
+    img.onerror = function() { showToast('File gambar tidak dapat dibaca.', 'error'); };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+function removeHeaderImage() {
+  BR_STATE.header = ''; BR_STATE.headerChanged = true;
+  const fi = document.getElementById('brHeaderFile'); if (fi) fi.value = '';
+  renderHeaderPreview();
+}
+
 function logoToDataUrl(img, isPng) {
   const sizes = [256, 192, 128, 96, 64];
   const formats = isPng ? ['png', 'jpeg'] : ['jpeg', 'png'];
@@ -4067,16 +4131,17 @@ function removeLogo() {
 function saveBranding() {
   const val = id => (document.getElementById(id).value || '').trim();
   const data = {
-    dash_header_image: val('brHeader'), dash_youtube: val('brYoutube'), dash_maps: val('brMaps'),
+    dash_youtube: val('brYoutube'), dash_maps: val('brMaps'),
     dash_instagram: val('brInstagram'), dash_facebook: val('brFacebook'), dash_tiktok: val('brTiktok'),
     dash_whatsapp: val('brWhatsapp'), dash_whatsapp_message: val('brWaMsg')
   };
   const err = document.getElementById('brError');
-  for (const k of ['dash_header_image', 'dash_instagram', 'dash_facebook', 'dash_tiktok']) {
+  for (const k of ['dash_instagram', 'dash_facebook', 'dash_tiktok']) {
     if (data[k] && !/^https?:\/\//i.test(data[k])) { err.textContent = 'Link harus diawali http:// atau https://'; return; }
   }
   err.textContent = '';
   if (BR_STATE.changed) data.logo = BR_STATE.logo;
+  if (BR_STATE.headerChanged) { data.header_image = BR_STATE.header; data.dash_header_image = ''; }
   showLoading('Menyimpan...');
   google.script.run
     .withSuccessHandler(function() {
@@ -4086,6 +4151,7 @@ function saveBranding() {
         try { localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify({ logo: BR_STATE.logo })); } catch (e) {}
         BR_STATE.changed = false;
       }
+      BR_STATE.headerChanged = false;
       APP.dashMedia = null;
       showToast('Logo & konten dashboard berhasil disimpan.', 'success');
     })
