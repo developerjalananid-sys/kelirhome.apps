@@ -1,0 +1,184 @@
+/* ================================================================
+   pwa.css - Penyesuaian PWA & tampilan Handphone untuk KELIR HOME APPS
+   Dimuat SETELAH <style> bawaan index.html, jadi menimpa aturan lama.
+   ================================================================ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-h: 62px;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  height: 100vh;
+  height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+button, .btn, .nav-item, .tab-btn { touch-action: manipulation; }
+
+/* ---------- Safe area (notch / status bar iOS & Android) ---------- */
+#topbar { padding-top: var(--safe-top); height: calc(var(--topbar-height) + var(--safe-top)); }
+#mainContent { top: calc(var(--topbar-height) + var(--safe-top)); overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+#sidebar { padding-top: var(--safe-top); }
+.sidebar-footer { padding-bottom: calc(16px + var(--safe-bottom)); }
+#publicRegisterPage { padding-top: var(--safe-top); }
+
+/* ---------- Pembantu layout ---------- */
+.two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+/* ---------- Banner offline ---------- */
+#offlineBanner {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 5000;
+  background: #b71c1c; color: #fff; text-align: center; font-size: 13px; font-weight: 600;
+  padding: calc(6px + var(--safe-top)) 12px 6px; transform: translateY(-110%); transition: transform .25s ease;
+}
+#offlineBanner.show { transform: translateY(0); }
+
+/* ---------- Bottom navigation (hanya Handphone) ---------- */
+#bottomNav { display: none; }
+
+/* ---------- Tombol pasang aplikasi ---------- */
+#installLoginBtn {
+  display: none; width: 100%; margin-top: 12px; padding: 10px 14px; border-radius: 8px;
+  border: 1px dashed var(--primary); background: #f3f8fc; color: var(--primary); font-weight: 600; font-size: 14px;
+}
+
+/* ================================================================
+   TABLET & HANDPHONE  (<= 768px)
+   ================================================================ */
+@media (max-width: 768px) {
+  /* Cegah zoom otomatis iOS saat fokus ke input */
+  input, select, textarea { font-size: 16px; }
+
+  /* Topbar ringkas */
+  #topbar { gap: 8px; padding-left: 12px; padding-right: 12px; }
+  #topbar .topbar-title { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #topbar .topbar-right { gap: 8px; }
+  #topbar .user-display, #topbar .sync-status { display: none; }
+  #topbar .menu-toggle { padding: 6px 8px; font-size: 26px; line-height: 1; }
+  .date-filter-wrapper select { width: auto; max-width: 118px; padding: 6px 8px; font-size: 13px; }
+  .date-filter-wrapper .custom-range {
+    position: fixed; left: 0; right: 0; top: calc(var(--topbar-height) + var(--safe-top));
+    background: var(--card-bg); padding: 12px; gap: 8px; z-index: 899; width: auto;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12); border-bottom: 1px solid var(--border);
+  }
+  .date-filter-wrapper .custom-range input { flex: 1; width: auto; min-width: 0; }
+
+  /* Sidebar + latar gelap */
+  #sidebar { width: min(82vw, 300px); box-shadow: 0 0 30px rgba(0,0,0,.35); }
+  body.sidebar-open::after { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 999; }
+  #sidebar nav .nav-item { padding: 13px 24px; }
+
+  /* Konten & ruang untuk bottom nav */
+  #mainContent { padding: 12px 12px calc(var(--bottom-nav-h) + var(--safe-bottom) + 16px); }
+  body.is-jemaat #mainContent { padding-bottom: calc(16px + var(--safe-bottom)); }
+
+  .two-col-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px; }
+  .chart-grid { gap: 12px; margin-bottom: 16px; }
+  .chart-card { padding: 14px; }
+  .dashboard-grid { gap: 10px; }
+  .stat-card { padding: 14px 16px; }
+
+  /* Toolbar tabel */
+  .datagrid-toolbar { padding: 12px; }
+  .datagrid-toolbar .title-area { flex-wrap: wrap; }
+  .datagrid-toolbar .search-area { width: 100%; gap: 6px; }
+  .datagrid-toolbar .search-area input { flex: 1 1 100%; width: 100%; }
+  .datagrid-toolbar .search-area .btn { flex: 1 1 auto; justify-content: center; }
+  .btn { min-height: 38px; }
+  .btn-sm { min-height: 34px; }
+  .datagrid-footer { padding: 10px 12px; }
+  .datagrid-footer .pagination { flex-wrap: wrap; justify-content: center; }
+  .family-structure-list { grid-template-columns: 1fr; }
+  .family-structure-toolbar input { max-width: none; }
+  .family-tabs { flex-wrap: wrap; }
+  .roster-tabs input { max-width: none !important; width: 100%; margin-left: 0 !important; }
+
+  /* Modal jadi "bottom sheet" */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal-box {
+    max-width: 100% !important; width: 100%; margin: 0;
+    max-height: 94vh; max-height: 94dvh;
+    border-radius: 18px 18px 0 0;
+  }
+  .modal-header { padding: 14px 16px; }
+  .modal-body { padding: 16px; }
+  .modal-footer {
+    position: sticky; bottom: 0; background: var(--card-bg);
+    padding: 12px 16px calc(12px + var(--safe-bottom));
+  }
+  .modal-footer .btn { flex: 1; justify-content: center; }
+
+  /* Toast di atas bottom nav */
+  #toastContainer { left: 12px; right: 12px; bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 10px); max-width: none; width: auto; }
+  body.is-jemaat #toastContainer { bottom: calc(14px + var(--safe-bottom)); }
+
+  /* Bottom navigation */
+  #bottomNav {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 950;
+    height: calc(var(--bottom-nav-h) + var(--safe-bottom)); padding-bottom: var(--safe-bottom);
+    background: var(--card-bg); border-top: 1px solid var(--border); box-shadow: 0 -2px 12px rgba(0,0,0,.06);
+  }
+  body.is-jemaat #bottomNav { display: none; }
+  #bottomNav button {
+    flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; color: var(--text-light); font-size: 11px; font-weight: 600; position: relative;
+  }
+  #bottomNav button .bn-icon { font-size: 20px; line-height: 1; }
+  #bottomNav button.active { color: var(--primary); }
+  #bottomNav button.active::before {
+    content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px;
+    background: var(--secondary); border-radius: 0 0 3px 3px;
+  }
+
+  /* Halaman check-in jemaat */
+  .mc-hero { padding: 16px 18px; }
+  .mc-row { padding: 12px; }
+  .mc-act .btn { min-height: 40px; }
+  .login-container { padding: 12px; }
+}
+
+/* ================================================================
+   HANDPHONE KECIL  (<= 640px): tabel data -> kartu
+   Hanya untuk tabel utama (class .grid-cards) yang punya data-label.
+   ================================================================ */
+@media (max-width: 640px) {
+  .datagrid-table.grid-cards thead { display: none; }
+  .datagrid-table.grid-cards,
+  .datagrid-table.grid-cards tbody,
+  .datagrid-table.grid-cards tr,
+  .datagrid-table.grid-cards td { display: block; width: 100%; }
+  .datagrid-table.grid-cards tr {
+    width: auto; margin: 10px 10px; padding: 6px 0;
+    border: 1px solid var(--border); border-radius: 12px; background: #fff;
+  }
+  .datagrid-table.grid-cards tr:hover { background: #fff; }
+  .datagrid-table.grid-cards td {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 7px 14px; border: none; text-align: right; word-break: break-word;
+  }
+  .datagrid-table.grid-cards td::before {
+    content: attr(data-label); flex-shrink: 0; max-width: 42%;
+    font-size: 12px; font-weight: 600; color: var(--text-light); text-align: left;
+  }
+  .datagrid-table.grid-cards td[colspan] { display: block; text-align: center; }
+  .datagrid-table.grid-cards td[colspan]::before { content: none; }
+  .datagrid-table.grid-cards td.td-actions {
+    border-top: 1px dashed var(--border); margin-top: 4px; padding-top: 10px; justify-content: flex-end;
+  }
+  .datagrid-table.grid-cards td.td-actions::before { content: none; }
+  .datagrid-table.grid-cards td.td-actions .actions { justify-content: flex-end; }
+  .datagrid-table.grid-cards td.td-actions .btn { padding: 8px 12px; }
+  .datagrid-table-wrap { padding: 0; }
+}
+
+@media (max-width: 480px) {
+  .stat-card .stat-value { font-size: 18px; word-break: break-word; }
+  .roster-cards { grid-template-columns: 1fr 1fr; }
+}
+
+/* Mode terpasang (standalone): tidak perlu hint pasang */
+@media (display-mode: standalone) {
+  #installLoginBtn { display: none !important; }
+}
