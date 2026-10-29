@@ -59,6 +59,14 @@ window.KELIR_API_URL = 'https://script.google.com/macros/s/XXXXXXXX/exec';
 - Menu samping dengan latar gelap, input 16 px (tidak zoom di iOS), area aman notch
 - Banner "Tidak ada koneksi" saat offline
 
+## Jika tombol Instal di HP bertuliskan "Aplikasi ini tidak dapat diinstal"
+
+1. Pakai Chrome biasa (bukan Incognito, bukan browser dalam WhatsApp), matikan *Situs desktop*.
+2. Hapus pintasan KELIR lama di layar utama bila ada.
+3. Chrome ⋮ › Setelan › Setelan situs › Penyimpanan → hapus data situs ini, lalu muat ulang 2x.
+4. `manifest.webmanifest` memakai `id: "kelir-home-apps"` (unik per aplikasi). Jangan kembali ke `"./"` karena akan
+   bertabrakan dengan aplikasi lain di akun GitHub Pages yang sama.
+
 ## Catatan penting
 
 - **Offline:** tampilan aplikasi bisa dibuka offline, tetapi data tetap butuh internet (data ada di Google Sheets).

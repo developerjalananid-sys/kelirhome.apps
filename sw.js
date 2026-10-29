@@ -6,10 +6,10 @@
 // - Panggilan API ke Google Apps Script: TIDAK pernah di-cache.
 // Naikkan VERSION setiap kali Anda mengubah daftar SHELL.
 // ================================================================
-const VERSION = 'kelir-v2';
+const VERSION = 'kelir-v3';
 const SHELL = [
   './', 'index.html', 'config.js', 'api.js', 'pwa.js', 'pwa.css', 'manifest.webmanifest',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
 const CDN_PRECACHE = [
   'https://cdn.jsdelivr.net/npm/chart.js',

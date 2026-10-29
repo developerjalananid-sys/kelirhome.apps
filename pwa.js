@@ -10,10 +10,9 @@
   'use strict';
 
   // ---------- Service worker ----------
+  // Didaftarkan segera (tidak menunggu 'load') agar Chrome Android cepat menilai aplikasi layak dipasang.
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js').catch(function (e) { console.warn('SW gagal:', e); });
-    });
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function (e) { console.warn('SW gagal:', e); });
   }
 
   // ---------- Banner offline ----------
