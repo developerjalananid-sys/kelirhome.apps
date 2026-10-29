@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d2b4a">
+<title>Diagnosa Instal KELIR</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  body{font-family:system-ui,sans-serif;margin:0;padding:16px;background:#f0f4f8;color:#1a1a2e;font-size:14px}
+  h1{font-size:18px;margin:0 0 4px} p{margin:4px 0 12px;color:#5a5a7a}
+  .row{background:#fff;border-radius:10px;padding:10px 12px;margin:8px 0;border-left:5px solid #999;word-break:break-word}
+  .ok{border-color:#2e7d32}.bad{border-color:#c62828}.warn{border-color:#f57f17}
+  .t{font-weight:700}.d{font-size:12px;color:#444;margin-top:2px;white-space:pre-wrap}
+  button{padding:10px 14px;border:0;border-radius:8px;background:#1a4d7c;color:#fff;font-size:14px;margin:4px 6px 4px 0}
+</style>
+</head>
+<body>
+<h1>Diagnosa Instal KELIR</h1>
+<p>Buka halaman ini di Chrome HP, tunggu ±8 detik, lalu kirim screenshot / hasil salinan.</p>
+<div><button id="btnCopy">Salin hasil</button><button id="btnPrompt" style="display:none">Coba dialog instal</button></div>
+<div id="out"></div>
+<script>
+(function(){
+  var out=document.getElementById('out'), lines=[], deferred=null, bipFired=false;
+  function add(level,title,detail){
+    lines.push('['+level.toUpperCase()+'] '+title+(detail?' :: '+detail:''));
+    var d=document.createElement('div'); d.className='row '+level;
+    d.innerHTML='<div class="t"></div><div class="d"></div>';
+    d.children[0].textContent=title; d.children[1].textContent=detail||'';
+    out.appendChild(d);
+  }
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;bipFired=true;document.getElementById('btnPrompt').style.display='';});
+  document.getElementById('btnPrompt').onclick=function(){if(deferred){deferred.prompt();}};
+  document.getElementById('btnCopy').onclick=function(){
+    var t=lines.join('\n');
+    if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){alert('Tersalin');});}
+    else{prompt('Salin teks ini:',t);}
+  };
+
+  async function run(){
+    add('ok','Alamat halaman',location.href);
+    add(window.isSecureContext?'ok':'bad','HTTPS / konteks aman','isSecureContext='+window.isSecureContext);
+    add('ok','Browser',navigator.userAgent);
+    var standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+    add(standalone?'warn':'ok','Mode tampilan saat ini',standalone?'standalone (sudah berjalan sebagai aplikasi terpasang)':'tab browser biasa');
+    if(window.top!==window.self) add('bad','Halaman dibuka di dalam frame','Instal tidak bisa dari iframe/in-app browser');
+    if(/FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)/i.test(navigator.userAgent)) add('bad','Terdeteksi WebView / browser dalam aplikasi','Buka link di Chrome asli');
+    if(!/Chrome\/\d+/.test(navigator.userAgent)||/SamsungBrowser|EdgA|OPR|Firefox|MiuiBrowser|UCBrowser/i.test(navigator.userAgent)) add('warn','Bukan Chrome standar','Gunakan Google Chrome');
+    var dt=navigator.userAgent.indexOf('Android')<0&&/Linux|X11/.test(navigator.userAgent);
+    if(dt) add('warn','Mode "Situs desktop" mungkin aktif','UA tidak memuat "Android"');
+
+    try{
+      if(navigator.storage&&navigator.storage.estimate){
+        var e=await navigator.storage.estimate();
+        var mb=Math.round((e.quota||0)/1048576);
+        add('ok','Kuota penyimpanan (info)',mb+' MB');
+      }
+    }catch(x){}
+
+    var link=document.querySelector('link[rel=manifest]');
+    var murl=new URL(link.getAttribute('href'),location.href).href;
+    var mf=null;
+    try{
+      var r=await fetch(murl,{cache:'no-store'});
+      add(r.ok?'ok':'bad','Manifest HTTP '+r.status,murl+'\nContent-Type: '+r.headers.get('content-type'));
+      var txt=await r.text();
+      try{mf=JSON.parse(txt);add('ok','Manifest JSON valid','name='+mf.name+' | display='+mf.display+' | id='+mf.id);}
+      catch(e2){add('bad','Manifest BUKAN JSON valid (kemungkinan halaman 404 GitHub)',txt.slice(0,120));}
+    }catch(e3){add('bad','Manifest gagal diunduh',String(e3));}
+
+    if(mf){
+      var start=new URL(mf.start_url||'./',murl), scope=new URL(mf.scope||'./',murl);
+      add('ok','start_url / scope',start.href+'\n'+scope.href);
+      add(start.href.indexOf(scope.href)===0?'ok':'bad','start_url berada dalam scope');
+      add(location.href.indexOf(scope.href)===0?'ok':'bad','Halaman ini berada dalam scope');
+      var okAny=false;
+      for(var i=0;i<(mf.icons||[]).length;i++){
+        var ic=mf.icons[i], iu=new URL(ic.src,murl).href;
+        try{
+          var rr=await fetch(iu,{cache:'no-store'});
+          var ct=rr.headers.get('content-type');
+          var blob=await rr.blob();
+          var dim=await new Promise(function(res){var im=new Image();im.onload=function(){res(im.naturalWidth+'x'+im.naturalHeight)};im.onerror=function(){res('GAGAL DIMUAT SEBAGAI GAMBAR')};im.src=URL.createObjectURL(blob);});
+          var good=rr.ok&&dim===ic.sizes;
+          if(good&&/any/.test(ic.purpose||'any')&&parseInt(ic.sizes)>=192) okAny=true;
+          add(good?'ok':'bad','Ikon '+ic.sizes+' ('+(ic.purpose||'any')+') HTTP '+rr.status,iu+'\nContent-Type: '+ct+' | ukuran asli: '+dim+' | '+blob.size+' byte');
+        }catch(e4){add('bad','Ikon gagal diunduh',iu+' '+e4);}
+      }
+      add(okAny?'ok':'bad','Ada ikon "any" ≥192px yang valid');
+      try{
+        var rs=await fetch(start.href,{cache:'no-store'});
+        add(rs.ok?'ok':'bad','start_url HTTP '+rs.status,start.href);
+      }catch(e5){add('bad','start_url gagal diakses',String(e5));}
+    }
+
+    if('serviceWorker' in navigator){
+      try{
+        var reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+        var sw=reg.installing||reg.waiting||reg.active;
+        add('ok','Service worker terdaftar','scope='+reg.scope+' | state='+(sw&&sw.state));
+        await navigator.serviceWorker.ready;
+        add(navigator.serviceWorker.controller?'ok':'warn','Halaman dikendalikan service worker',navigator.serviceWorker.controller?'ya':'belum (muat ulang sekali lalu buka lagi diagnosa ini)');
+        var rsw=await fetch('./sw.js',{cache:'no-store'});
+        var stxt=await rsw.text();
+        add(/addEventListener\(\s*['"]fetch['"]/.test(stxt)?'ok':'bad','sw.js punya fetch handler','HTTP '+rsw.status+' | '+stxt.length+' karakter | '+(stxt.match(/VERSION\s*=\s*'([^']+)'/)||[])[0]);
+      }catch(e6){add('bad','Service worker GAGAL didaftarkan',String(e6));}
+    }else add('bad','Browser tanpa service worker');
+
+    try{
+      if(navigator.getInstalledRelatedApps){
+        var rel=await navigator.getInstalledRelatedApps();
+        add('ok','Aplikasi terkait terpasang',JSON.stringify(rel));
+      }
+    }catch(e7){}
+
+    await new Promise(function(r){setTimeout(r,6000);});
+    add(bipFired?'ok':'bad','Event beforeinstallprompt',bipFired?'DITERIMA: Chrome menilai aplikasi layak dipasang (tombol "Coba dialog instal" muncul)':'TIDAK muncul. Muat ulang halaman ini sekali lalu cek lagi. Jika tetap tidak muncul, Chrome menilai belum layak dipasang (atau tab Penyamaran)');
+    add('ok','Selesai','Kirim hasil ini ke Claude');
+  }
+  run();
+})();
+</script>
+</body>
+</html>
