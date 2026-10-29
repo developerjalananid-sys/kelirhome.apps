@@ -424,6 +424,20 @@
       font-weight: 500;
     }
     .chart-card canvas { max-height: 250px; }
+    .btn-install { width: 100%; margin-top: 10px; padding: 11px 24px; font-size: 15px; font-weight: 600; border-radius: 8px; border: 2px solid var(--primary); background: #fff; color: var(--primary); transition: var(--transition); }
+    .btn-install:hover { background: var(--primary); color: #fff; }
+    .install-steps { margin: 8px 0 0 18px; line-height: 1.7; font-size: 14px; }
+    .brand-logo { display: none; object-fit: contain; }
+    .brand-logo.has { display: block; }
+    .login-header .brand-logo { height: 72px; max-width: 220px; margin: 0 auto 10px; }
+    #sidebar .sidebar-brand { display: flex; align-items: center; gap: 10px; }
+    #sidebar .sidebar-brand .brand-logo { height: 38px; width: 38px; border-radius: 8px; flex-shrink: 0; background: rgba(255,255,255,0.08); }
+    .br-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .br-grid .full { grid-column: 1 / -1; }
+    .br-logo-box { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .br-logo-preview { width: 96px; height: 96px; border: 2px dashed var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--bg); overflow: hidden; color: var(--text-light); font-size: 12px; text-align: center; }
+    .br-logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+    @media (max-width: 768px) { .br-grid { grid-template-columns: 1fr; } }
     .two-col-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1036,6 +1050,7 @@
   <div class="login-container">
     <div class="login-box">
       <div class="login-header">
+        <img class="brand-logo" alt="Logo">
         <div class="logo">KELIR <span>HOME APPS</span></div>
         <p>GBI Keluarga Imamat Rajani Tenggarong</p>
       </div>
@@ -1053,6 +1068,7 @@
         </div>
         <div id="loginError" class="error-message"></div>
         <button type="submit" class="btn-primary" id="loginBtn">MASUK</button>
+        <button type="button" class="btn-install" id="installBtn" onclick="installApp()" style="display:none">📲 Pasang Aplikasi</button>
       </form>
       <p class="login-hint">Jemaat: masuk dengan <b>Member ID</b> Anda dan password awal <b>123456</b>.</p>
     </div>
@@ -1066,6 +1082,7 @@
   <div class="pub-container">
     <div class="pub-card">
       <div class="login-header">
+        <img class="brand-logo" alt="Logo">
         <div class="logo">KELIR <span>HOME APPS</span></div>
         <p id="pubChurch">GBI Keluarga Imamat Rajani Tenggarong</p>
       </div>
@@ -1084,8 +1101,9 @@
   <!-- SIDEBAR -->
   <aside id="sidebar">
     <div class="sidebar-brand">
-      KELIR
-      <span class="brand-sub">HOME APPS</span>
+      <img class="brand-logo" alt="Logo">
+      <div>KELIR
+        <span class="brand-sub">HOME APPS</span></div>
     </div>
     <nav id="sidebarNav"></nav>
     <div class="sidebar-footer">
@@ -1628,25 +1646,10 @@ function renderPage(page) {
 // ================================================================
 
 // ----------------------------------------------------------------
-// PENGATURAN KONTEN DASHBOARD - isi/paste di sini
+// KONTEN DASHBOARD (header, YouTube, Maps, sosmed, WhatsApp)
+// Diatur dari menu Pengaturan > "Logo & Konten Dashboard"; datanya
+// dikirim server lewat getDashboardStats (result.media).
 // ----------------------------------------------------------------
-const DASHBOARD_MEDIA = {
-  // URL gambar header (mis. https://.../header.jpg). Kosong = placeholder.
-  headerImage: '',
-  // Link YouTube (watch / youtu.be / embed / shorts / playlist). Kosong = placeholder.
-  youtube: '',
-  // Alamat lokasi (mis. 'GBI Keluarga Imamat Rajani Tenggarong') ATAU URL embed
-  // dari Google Maps > Bagikan > Sematkan peta (boleh paste seluruh kode <iframe>).
-  maps: '',
-  // Link profil sosial media. Kosong = tombol tampil nonaktif.
-  instagram: '',
-  facebook: '',
-  tiktok: '',
-  // Nomor WhatsApp format internasional tanpa + / spasi (mis. 6281234567890).
-  whatsapp: '',
-  whatsappMessage: 'Shalom, saya ingin bertanya tentang GBI Keluarga Imamat Rajani Tenggarong.'
-};
-
 function ytEmbedUrl(raw) {
   const s = String(raw || '').trim();
   if (!s) return '';
@@ -1674,26 +1677,26 @@ function dashboardMediaPlaceholder(icon, title, hint) {
 }
 
 function renderDashboardMedia() {
-  const M = DASHBOARD_MEDIA;
+  const M = APP.dashMedia || {};
   const hdr = document.getElementById('dashHeaderImage');
   if (hdr) {
     hdr.innerHTML = M.headerImage
       ? '<img src="' + escapeHtml(M.headerImage) + '" alt="Header" style="display:block;width:100%;max-height:260px;object-fit:cover;border-radius:12px;">'
-      : dashboardMediaPlaceholder('🖼️', 'Gambar Header', 'Isi <code>headerImage</code> di DASHBOARD_MEDIA (disarankan 1600×400 px)');
+      : dashboardMediaPlaceholder('🖼️', 'Gambar Header', 'Atur link gambar di Pengaturan › Logo &amp; Konten Dashboard (disarankan 1600×400 px)');
   }
   const yt = document.getElementById('dashYoutube');
   if (yt) {
     const u = ytEmbedUrl(M.youtube);
     yt.innerHTML = u
       ? '<div style="position:relative;padding-top:56.25%;"><iframe src="' + escapeHtml(u) + '" title="YouTube" style="position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:10px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
-      : dashboardMediaPlaceholder('▶️', 'Video YouTube', 'Paste link YouTube di <code>youtube</code> pada DASHBOARD_MEDIA');
+      : dashboardMediaPlaceholder('▶️', 'Video YouTube', 'Paste link YouTube di Pengaturan › Logo &amp; Konten Dashboard');
   }
   const mp = document.getElementById('dashMaps');
   if (mp) {
     const u = mapsEmbedUrl(M.maps);
     mp.innerHTML = u
       ? '<iframe src="' + escapeHtml(u) + '" title="Google Maps" style="width:100%;height:320px;border:0;border-radius:10px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>'
-      : dashboardMediaPlaceholder('📍', 'Lokasi Google Maps', 'Isi alamat atau link embed di <code>maps</code> pada DASHBOARD_MEDIA');
+      : dashboardMediaPlaceholder('📍', 'Lokasi Google Maps', 'Isi alamat / link embed di Pengaturan › Logo &amp; Konten Dashboard');
   }
   const so = document.getElementById('dashSocial');
   if (so) {
@@ -1706,7 +1709,7 @@ function renderDashboardMedia() {
       const ok = /^https?:\/\//i.test(it[2] || '');
       return ok
         ? '<a href="' + escapeHtml(it[2]) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:' + it[3] + ';color:#fff;font-weight:600;font-size:14px;">' + it[1] + ' ' + it[0] + '</a>'
-        : '<div title="Isi link ' + it[0] + ' di DASHBOARD_MEDIA" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:2px dashed var(--border);background:var(--bg);color:var(--text-light);font-size:14px;">' + it[1] + ' ' + it[0] + ' <span style="font-size:11px;margin-left:auto;">belum diisi</span></div>';
+        : '<div title="Isi link ' + it[0] + ' di menu Pengaturan" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:2px dashed var(--border);background:var(--bg);color:var(--text-light);font-size:14px;">' + it[1] + ' ' + it[0] + ' <span style="font-size:11px;margin-left:auto;">belum diisi</span></div>';
     }).join('');
   }
   const wa = document.getElementById('dashWhatsapp');
@@ -1714,7 +1717,7 @@ function renderDashboardMedia() {
     const num = String(M.whatsapp || '').replace(/\D/g, '');
     wa.innerHTML = num
       ? '<a href="https://wa.me/' + num + '?text=' + encodeURIComponent(M.whatsappMessage || '') + '" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border-radius:10px;background:#25d366;color:#fff;font-weight:700;font-size:15px;">💬 Hubungi via WhatsApp</a>'
-      : dashboardMediaPlaceholder('💬', 'WhatsApp', 'Isi nomor di <code>whatsapp</code> pada DASHBOARD_MEDIA (mis. 6281234567890)');
+      : dashboardMediaPlaceholder('💬', 'WhatsApp', 'Isi nomor di Pengaturan › Logo &amp; Konten Dashboard (mis. 6281234567890)');
   }
 }
 
@@ -1763,6 +1766,8 @@ function loadDashboardStats() {
   google.script.run
     .withSuccessHandler(function(result) {
       hideLoading();
+      APP.dashMedia = result.media || {};
+      renderDashboardMedia();
       renderDashboardStats(result);
       renderDashboardCharts(result);
       renderBirthdayWidget(result.birthdays || []);
@@ -3655,6 +3660,7 @@ function renderSettings(container) {
         </div>
       </div>
     </div>
+    <div class="datagrid-container" id="brandingCard" style="margin-top:16px;"></div>
     <div style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
       <button class="btn btn-primary-bg" onclick="navigateTo('users')" style="padding:16px;font-size:14px;">👤 Kelola Users</button>
       <button class="btn btn-primary-bg" onclick="navigateTo('roles')" style="padding:16px;font-size:14px;">🎭 Kelola Roles</button>
@@ -3716,6 +3722,7 @@ function renderSettingsForm(settings) {
     html += `<div class="form-group"><label>${field.label}</label><input type="${field.type}" id="setting_${field.key}" value="${safeString(value)}" placeholder="${field.placeholder || ''}"><div class="field-error" id="error_${field.key}"></div></div>`;
   }
   container.innerHTML = html;
+  renderBrandingForm(settings);
 }
 
 function saveAllSettings() {
@@ -3906,6 +3913,280 @@ function resetDatabase() {
     })
     .withFailureHandler(function(err) { hideLoading(); showToast('Terjadi kesalahan.', 'error'); console.error(err); })
     .setupDatabase();
+}
+
+
+// ================================================================
+// BRANDING: LOGO APLIKASI & PENGATURAN KONTEN DASHBOARD
+// ================================================================
+const BRANDING_CACHE_KEY = 'kelir_branding';
+const LOGO_MAX_CHARS = 45000; // batas sel Google Sheets 50.000 karakter
+const BR_STATE = { logo: '', changed: false, src: null };
+const ICON_ORIG = {};
+
+function isValidLogo(v) { return typeof v === 'string' && /^data:image\/(png|jpeg);base64,/.test(v); }
+
+function setIconLink(rel, href, type) {
+  document.querySelectorAll('link[rel="' + rel + '"]').forEach(l => {
+    if (!(rel in ICON_ORIG)) ICON_ORIG[rel] = { href: l.getAttribute('href'), type: l.getAttribute('type'), sizes: l.getAttribute('sizes') };
+    if (href) { l.setAttribute('href', href); if (type) l.setAttribute('type', type); l.removeAttribute('sizes'); }
+    else if (ICON_ORIG[rel]) {
+      l.setAttribute('href', ICON_ORIG[rel].href);
+      if (ICON_ORIG[rel].type) l.setAttribute('type', ICON_ORIG[rel].type);
+      if (ICON_ORIG[rel].sizes) l.setAttribute('sizes', ICON_ORIG[rel].sizes);
+    }
+  });
+}
+
+// Menerapkan logo ke: panel login, formulir publik, menu samping, ikon tab/taskbar browser & apple-touch-icon.
+function applyBranding(b) {
+  b = b || {};
+  const logo = isValidLogo(b.logo) ? b.logo : '';
+  document.querySelectorAll('.brand-logo').forEach(img => {
+    if (logo) { img.src = logo; img.classList.add('has'); }
+    else { img.removeAttribute('src'); img.classList.remove('has'); }
+  });
+  const type = logo ? logo.slice(5, logo.indexOf(';')) : '';
+  setIconLink('icon', logo, type);
+  setIconLink('apple-touch-icon', logo, type);
+}
+
+function loadBranding() {
+  try {
+    const c = JSON.parse(localStorage.getItem(BRANDING_CACHE_KEY) || 'null');
+    if (c) applyBranding(c);
+  } catch (e) {}
+  google.script.run
+    .withSuccessHandler(function(b) {
+      if (!b) return;
+      applyBranding(b);
+      try { localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify({ logo: b.logo || '' })); } catch (e) {}
+    })
+    .withFailureHandler(function(err) { console.error(err); })
+    .getPublicBranding();
+}
+
+function renderBrandingForm(settings) {
+  const el = document.getElementById('brandingCard');
+  if (!el) return;
+  settings = settings || {};
+  BR_STATE.logo = isValidLogo(settings.app_logo) ? settings.app_logo : '';
+  BR_STATE.changed = false;
+  BR_STATE.src = null;
+  const v = k => escapeHtml(settings[k] || '');
+  el.innerHTML = `
+    <div class="datagrid-toolbar">
+      <div class="title-area"><h3>🖼️ Logo &amp; Konten Dashboard</h3><span class="count">Logo aplikasi, header, YouTube, Maps, sosial media &amp; WhatsApp</span></div>
+      <div class="search-area"><button class="btn btn-primary-bg" onclick="saveBranding()">💾 Simpan</button></div>
+    </div>
+    <div class="modal-body" style="padding:24px;">
+      <h4 style="margin-bottom:10px;">Logo Aplikasi</h4>
+      <div class="br-logo-box">
+        <div class="br-logo-preview" id="brLogoPreview"></div>
+        <div>
+          <input type="file" id="brLogoFile" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="onLogoFileChosen(this)" style="max-width:320px;">
+          <div class="text-xs text-muted mt-8">Format PNG atau JPG. Disarankan persegi (mis. 512×512). Otomatis diperkecil agar muat disimpan.</div>
+          <div class="flex gap-8 flex-wrap mt-8">
+            <button class="btn btn-outline btn-sm" onclick="removeLogo()">🗑 Hapus Logo</button>
+            <button class="btn btn-outline btn-sm" onclick="downloadIconPack()">⬇️ Unduh Paket Ikon (PWA)</button>
+          </div>
+        </div>
+      </div>
+      <p class="text-xs text-muted mt-8">Logo dipakai di panel login, menu samping, dan ikon tab/taskbar browser. Ikon shortcut aplikasi yang sudah di-install (PWA) mengikuti file ikon di hosting: unduh "Paket Ikon", ganti file di folder <b>icons/</b>, lalu install ulang aplikasinya.</p>
+      <h4 style="margin:20px 0 10px;">Konten Dashboard</h4>
+      <div class="br-grid">
+        <div class="form-group full"><label>Gambar Header (link gambar)</label><input type="text" id="brHeader" value="${v('dash_header_image')}" placeholder="https://.../header.jpg"></div>
+        <div class="form-group full"><label>Video YouTube (paste link)</label><input type="text" id="brYoutube" value="${v('dash_youtube')}" placeholder="https://www.youtube.com/watch?v=..."></div>
+        <div class="form-group full"><label>Google Maps (alamat, link embed, atau kode iframe)</label><textarea id="brMaps" placeholder="GBI Keluarga Imamat Rajani Tenggarong">${v('dash_maps')}</textarea></div>
+        <div class="form-group"><label>Instagram (link profil)</label><input type="text" id="brInstagram" value="${v('dash_instagram')}" placeholder="https://instagram.com/..."></div>
+        <div class="form-group"><label>Facebook (link halaman)</label><input type="text" id="brFacebook" value="${v('dash_facebook')}" placeholder="https://facebook.com/..."></div>
+        <div class="form-group"><label>TikTok (link profil)</label><input type="text" id="brTiktok" value="${v('dash_tiktok')}" placeholder="https://tiktok.com/@..."></div>
+        <div class="form-group"><label>Nomor WhatsApp (format 62…, tanpa + / spasi)</label><input type="text" id="brWhatsapp" value="${v('dash_whatsapp')}" placeholder="6281234567890" inputmode="numeric"></div>
+        <div class="form-group full"><label>Pesan Awal WhatsApp</label><input type="text" id="brWaMsg" value="${v('dash_whatsapp_message')}" placeholder="Shalom, saya ingin bertanya..."></div>
+      </div>
+      <div id="brError" class="error-message" style="margin-top:8px;"></div>
+    </div>`;
+  renderLogoPreview();
+}
+
+function renderLogoPreview() {
+  const box = document.getElementById('brLogoPreview');
+  if (!box) return;
+  box.innerHTML = BR_STATE.logo ? '<img src="' + BR_STATE.logo + '" alt="Logo">' : 'Belum ada logo';
+}
+
+// Memperkecil gambar ke persegi dan mencari ukuran/format yang muat di batas sel Google Sheets.
+function logoToDataUrl(img, isPng) {
+  const sizes = [256, 192, 128, 96, 64];
+  const formats = isPng ? ['png', 'jpeg'] : ['jpeg', 'png'];
+  for (const size of sizes) {
+    for (const fmt of formats) {
+      const c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      const ctx = c.getContext('2d');
+      if (fmt === 'jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size); }
+      const ratio = Math.min(size / img.width, size / img.height);
+      const w = img.width * ratio, h = img.height * ratio;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      const url = fmt === 'png' ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85);
+      if (url.length <= LOGO_MAX_CHARS) return url;
+    }
+  }
+  return '';
+}
+
+function onLogoFileChosen(input) {
+  const f = input.files && input.files[0];
+  const err = document.getElementById('brError');
+  if (err) err.textContent = '';
+  if (!f) return;
+  if (!/^image\/(png|jpeg)$/.test(f.type)) { input.value = ''; showToast('Logo harus berformat PNG atau JPG.', 'error'); return; }
+  if (f.size > 8 * 1024 * 1024) { input.value = ''; showToast('Ukuran file terlalu besar (maks 8 MB).', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const url = logoToDataUrl(img, f.type === 'image/png');
+      if (!url) { showToast('Gambar terlalu kompleks untuk disimpan. Gunakan logo yang lebih sederhana.', 'error'); return; }
+      BR_STATE.logo = url; BR_STATE.changed = true; BR_STATE.src = img;
+      renderLogoPreview();
+      showToast('Logo siap. Klik Simpan untuk menerapkan.', 'info');
+    };
+    img.onerror = function() { showToast('File gambar tidak dapat dibaca.', 'error'); };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+function removeLogo() {
+  BR_STATE.logo = ''; BR_STATE.changed = true; BR_STATE.src = null;
+  const fi = document.getElementById('brLogoFile'); if (fi) fi.value = '';
+  renderLogoPreview();
+}
+
+function saveBranding() {
+  const val = id => (document.getElementById(id).value || '').trim();
+  const data = {
+    dash_header_image: val('brHeader'), dash_youtube: val('brYoutube'), dash_maps: val('brMaps'),
+    dash_instagram: val('brInstagram'), dash_facebook: val('brFacebook'), dash_tiktok: val('brTiktok'),
+    dash_whatsapp: val('brWhatsapp'), dash_whatsapp_message: val('brWaMsg')
+  };
+  const err = document.getElementById('brError');
+  for (const k of ['dash_header_image', 'dash_instagram', 'dash_facebook', 'dash_tiktok']) {
+    if (data[k] && !/^https?:\/\//i.test(data[k])) { err.textContent = 'Link harus diawali http:// atau https://'; return; }
+  }
+  err.textContent = '';
+  if (BR_STATE.changed) data.logo = BR_STATE.logo;
+  showLoading('Menyimpan...');
+  google.script.run
+    .withSuccessHandler(function() {
+      hideLoading();
+      if (BR_STATE.changed) {
+        applyBranding({ logo: BR_STATE.logo });
+        try { localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify({ logo: BR_STATE.logo })); } catch (e) {}
+        BR_STATE.changed = false;
+      }
+      APP.dashMedia = null;
+      showToast('Logo & konten dashboard berhasil disimpan.', 'success');
+    })
+    .withFailureHandler(function(e) { hideLoading(); handleServerError(e, 'Gagal menyimpan.'); })
+    .saveBranding(APP.sessionToken, data);
+}
+
+// Membuat file ikon (favicon-32, apple-touch-icon, icon-192, icon-512) dari logo, untuk diganti di folder icons/ hosting.
+function downloadIconPack() {
+  const make = function(img) {
+    [['favicon-32.png', 32, false], ['apple-touch-icon.png', 180, true], ['icon-192.png', 192, false], ['icon-512.png', 512, false]].forEach(function(spec, i) {
+      setTimeout(function() {
+        const c = document.createElement('canvas');
+        c.width = spec[1]; c.height = spec[1];
+        const ctx = c.getContext('2d');
+        if (spec[2]) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, spec[1], spec[1]); }
+        const ratio = Math.min(spec[1] / img.width, spec[1] / img.height);
+        ctx.drawImage(img, (spec[1] - img.width * ratio) / 2, (spec[1] - img.height * ratio) / 2, img.width * ratio, img.height * ratio);
+        c.toBlob(function(blob) {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob); a.download = spec[0];
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+        }, 'image/png');
+      }, i * 400);
+    });
+    showToast('Mengunduh 4 file ikon. Izinkan unduhan ganda bila diminta browser.', 'info');
+  };
+  if (BR_STATE.src) { make(BR_STATE.src); return; }
+  if (!BR_STATE.logo) { showToast('Belum ada logo.', 'warning'); return; }
+  const img = new Image();
+  img.onload = function() { make(img); };
+  img.src = BR_STATE.logo;
+}
+
+
+// ================================================================
+// PASANG APLIKASI (PWA) - tombol di panel login
+// ================================================================
+let DEFERRED_INSTALL = null;
+
+function isStandaloneApp() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+
+function refreshInstallButton() {
+  const b = document.getElementById('installBtn');
+  if (b) b.style.display = isStandaloneApp() ? 'none' : '';
+}
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  DEFERRED_INSTALL = e;
+  refreshInstallButton();
+});
+
+window.addEventListener('appinstalled', function() {
+  DEFERRED_INSTALL = null;
+  const b = document.getElementById('installBtn');
+  if (b) b.style.display = 'none';
+  showToast('Aplikasi berhasil dipasang. Buka dari pintasan di layar/desktop Anda.', 'success');
+});
+
+function installApp() {
+  if (DEFERRED_INSTALL) {
+    const ev = DEFERRED_INSTALL;
+    DEFERRED_INSTALL = null;
+    ev.prompt();
+    ev.userChoice.then(function(choice) {
+      if (choice && choice.outcome === 'accepted') showToast('Memasang aplikasi…', 'info');
+    }).catch(function() {});
+    return;
+  }
+  showInstallHelp();
+}
+
+// Dipakai bila browser tidak menyediakan dialog instal otomatis (mis. iPhone/iPad Safari, Firefox, atau sudah pernah ditolak).
+function showInstallHelp() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/i.test(ua);
+  let steps;
+  if (isIOS) {
+    steps = ['Buka halaman ini di <b>Safari</b>.', 'Ketuk tombol <b>Bagikan</b> (kotak dengan panah ke atas).', 'Pilih <b>Tambahkan ke Layar Utama</b>, lalu ketuk <b>Tambah</b>.'];
+  } else if (isAndroid) {
+    steps = ['Buka halaman ini di <b>Chrome</b>.', 'Ketuk menu <b>⋮</b> di pojok kanan atas.', 'Pilih <b>Instal aplikasi</b> atau <b>Tambahkan ke layar utama</b>.'];
+  } else {
+    steps = ['Gunakan <b>Chrome</b> atau <b>Edge</b>.', 'Klik ikon <b>Instal</b> (monitor dengan panah) di ujung kanan kolom alamat, atau menu <b>⋮</b> › <b>Instal KELIR</b>.', 'Konfirmasi dengan klik <b>Instal</b>. Pintasan akan muncul di desktop / taskbar.'];
+  }
+  document.getElementById('modalContainer').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal-box" style="max-width:460px;">
+        <div class="modal-header"><h3>📲 Pasang Aplikasi</h3><button class="close-btn" onclick="closeModal()">✕</button></div>
+        <div class="modal-body">
+          <p style="font-size:14px;color:var(--text-light);">Ikuti langkah berikut untuk memasang KELIR HOME APPS sebagai aplikasi dengan pintasan sendiri:</p>
+          <ol class="install-steps">${steps.map(x => '<li>' + x + '</li>').join('')}</ol>
+          <p style="font-size:12px;color:var(--text-light);margin-top:12px;">Jika menu instal tidak muncul, pastikan alamat memakai <b>https://</b> dan muat ulang halaman satu kali.</p>
+        </div>
+        <div class="modal-footer"><button class="btn btn-primary-bg" onclick="closeModal()">Mengerti</button></div>
+      </div>
+    </div>`;
 }
 
 // ================================================================
@@ -4152,6 +4433,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Try to restore a saved session (e.g. after a page refresh) before
   // falling back to the login screen.
+  loadBranding();
+  refreshInstallButton();
   if (window.__KELIR_PAGE__ === 'daftar') { initPublicRegisterPage(); return; }
   tryRestoreSession();
 });
@@ -4193,6 +4476,7 @@ window.refreshSettings = refreshSettings;
 window.resetDatabase = resetDatabase;
 window.repairDuplicateIds = repairDuplicateIds;
 window.syncAllData = syncAllData;
+window.installApp = installApp;
 window.exportData = exportData;
 
 // ================================================================
