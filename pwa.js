@@ -35,55 +35,25 @@
   }
 
   // ---------- Pasang aplikasi ----------
-  var deferredPrompt = null;
+  // Logika instal (beforeinstallprompt, tombol di panel login, panduan manual) ada di index.html
+  // (window.installApp). Di sini hanya item "Pasang Aplikasi" di menu samping.
   function isStandalone() {
     return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
   }
-  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-  function canOfferInstall() { return !isStandalone() && (!!deferredPrompt || isIOS); }
-
-  function refreshInstallUI() {
-    var show = canOfferInstall();
-    var a = document.getElementById('installNavItem');
-    var b = document.getElementById('installLoginBtn');
-    if (a) a.style.display = show ? '' : 'none';
-    if (b) b.style.display = show ? 'block' : 'none';
-  }
-
-  function installApp() {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(function () { deferredPrompt = null; refreshInstallUI(); });
-    } else if (isIOS) {
-      showToast('Di Safari: ketuk tombol Bagikan (kotak berpanah), lalu pilih "Tambah ke Layar Utama".', 'info');
-    }
-  }
-
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; refreshInstallUI(); });
-  window.addEventListener('appinstalled', function () { deferredPrompt = null; refreshInstallUI(); showToast('Aplikasi berhasil dipasang.', 'success'); });
 
   var footer = document.querySelector('.sidebar-footer');
-  if (footer) {
+  if (footer && !isStandalone()) {
     var item = document.createElement('div');
     item.className = 'nav-item';
     item.id = 'installNavItem';
-    item.style.display = 'none';
     item.innerHTML = '<span class="icon">📲</span><span>Pasang Aplikasi</span>';
-    item.addEventListener('click', installApp);
+    item.addEventListener('click', function () { if (typeof window.installApp === 'function') window.installApp(); });
     footer.insertBefore(item, footer.firstChild);
   }
-  var hint = document.querySelector('.login-hint');
-  if (hint) {
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'installLoginBtn';
-    btn.textContent = '📲 Pasang aplikasi di layar utama';
-    btn.addEventListener('click', installApp);
-    hint.parentNode.insertBefore(btn, hint.nextSibling);
-  }
-  refreshInstallUI();
+  window.addEventListener('appinstalled', function () {
+    var a = document.getElementById('installNavItem');
+    if (a) a.style.display = 'none';
+  });
 
   // ---------- Bottom navigation ----------
   var appContainer = document.getElementById('appContainer');
