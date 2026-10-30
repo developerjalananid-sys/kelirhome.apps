@@ -2749,9 +2749,11 @@ function getGridConfig(id) {
       createFields: [
         { key: 'username', label: 'Username', required: true },
         { key: 'full_name', label: 'Nama Lengkap', required: true },
+        { key: 'password', label: 'Password Login (min. 8 karakter)', editLabel: 'Password Baru (kosongkan jika tidak diubah)', type: 'password', required: true, placeholder: 'Minimal 8 karakter' },
+        { key: 'password_confirm', label: 'Konfirmasi Password', editLabel: 'Konfirmasi Password Baru', type: 'password', required: true, placeholder: 'Ulangi password' },
         { key: 'phone', label: 'Telepon' },
         { key: 'role_id', label: 'Role ID' },
-        { key: 'status', label: 'Status', type: 'select', options: [{value:'ACTIVE',label:'Aktif'},{value:'INACTIVE',label:'Tidak Aktif'},{value:'LOCKED',label:'Terkunci'}] }
+        { key: 'status', label: 'Status', type: 'select', options: [{value:'ACTIVE',label:'Aktif'},{value:'REQUIRES_PASSWORD_SETUP',label:'Wajib ganti password saat login pertama'},{value:'INACTIVE',label:'Tidak Aktif'},{value:'LOCKED',label:'Terkunci'}] }
       ]
     },
     roles: {
@@ -2887,7 +2889,7 @@ function showCreateForm(id, prefill, hintHtml) {
         ` : f.type === 'textarea' ? `
           <textarea id="cf_${f.key}" ${f.required ? 'required' : ''}></textarea>
         ` : `
-          <input type="${f.type || 'text'}" id="cf_${f.key}" ${f.required ? 'required' : ''}>
+          <input type="${f.type || 'text'}" id="cf_${f.key}" ${f.required ? 'required' : ''} ${f.type === 'password' ? 'autocomplete="new-password"' : ''} ${f.placeholder ? 'placeholder="' + f.placeholder + '"' : ''}>
         `}
       </div>
     `).join('');
@@ -2926,6 +2928,16 @@ function showCreateForm(id, prefill, hintHtml) {
   });
 }
 
+// Validasi field password pada form User. Saat edit, password boleh dikosongkan (tidak diubah).
+function validateUserPassword_(data, isCreate) {
+  const pw = data.password || '';
+  const pw2 = data.password_confirm || '';
+  if (!isCreate && pw === '' && pw2 === '') return '';
+  if (pw.length < 8) return 'Password minimal 8 karakter.';
+  if (pw !== pw2) return 'Konfirmasi password tidak sama.';
+  return '';
+}
+
 function submitCreateForm(id) {
   const config = getGridConfig(id);
   if (!config) return;
@@ -2946,6 +2958,12 @@ function submitCreateForm(id) {
         return;
       }
     }
+  }
+
+  if (id === 'users') {
+    const pwErr = validateUserPassword_(data, true);
+    if (pwErr) { document.getElementById('cfError').textContent = pwErr; return; }
+    delete data.password_confirm;
   }
 
   showLoading('Menyimpan...');
@@ -3073,7 +3091,7 @@ function showEditForm(id, record) {
   if (config.createFields) {
     fieldsHtml = config.createFields.map(f => `
       <div class="form-group ${f.full ? 'full' : ''}">
-        <label>${f.label}</label>
+        <label>${f.editLabel || f.label}</label>
         ${f.type === 'member-select' ? buildMemberSelectHtml('ef', f, record[f.key]) : f.type === 'select' ? `
           <select id="ef_${f.key}" ${f.required ? 'required' : ''} ${f.onchange ? `onchange="${f.onchange}"` : ''}>
             ${buildSelectOptionsHtml(id, f, record[f.key])}
@@ -3085,7 +3103,7 @@ function showEditForm(id, record) {
         ` : f.type === 'textarea' ? `
           <textarea id="ef_${f.key}" ${f.required ? 'required' : ''}>${escapeHtml(record[f.key])}</textarea>
         ` : `
-          <input type="${f.type || 'text'}" id="ef_${f.key}" value="${escapeHtml(f.type === 'date' ? toDateInputValue(record[f.key]) : record[f.key])}" ${f.required ? 'required' : ''}>
+          <input type="${f.type || 'text'}" id="ef_${f.key}" value="${f.type === 'password' ? '' : escapeHtml(f.type === 'date' ? toDateInputValue(record[f.key]) : record[f.key])}" ${f.required && f.type !== 'password' ? 'required' : ''} ${f.type === 'password' ? 'autocomplete="new-password"' : ''} ${f.placeholder ? 'placeholder="' + f.placeholder + '"' : ''}>
         `}
       </div>
     `).join('');
@@ -3132,6 +3150,13 @@ function submitEditForm(id, recordId) {
       const el = document.getElementById('ef_' + f.key);
       if (el) data[f.key] = el.value;
     }
+  }
+
+  if (id === 'users') {
+    const pwErr = validateUserPassword_(data, false);
+    if (pwErr) { document.getElementById('efError').textContent = pwErr; return; }
+    delete data.password_confirm;
+    if (!data.password) delete data.password;
   }
 
   showLoading('Menyimpan...');
