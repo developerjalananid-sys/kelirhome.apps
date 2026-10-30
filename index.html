@@ -4658,6 +4658,7 @@ function ensureMemberOptions(cb, force) {
     .withFailureHandler(function(err) {
       console.error(err);
       APP.refLoaded = true;
+      showToast('Daftar pilihan (Sektor, Ministry, dll.) gagal dimuat. Pastikan Code.gs terbaru sudah di-deploy, lalu klik Sync.', 'error');
       done();
     })
     .getRefOptions(APP.sessionToken);
@@ -4895,7 +4896,8 @@ function initRefSelect(prefix, f) {
     },
     emptyText: function() {
       if (isMM) return depValue() ? 'Belum ada pelayan aktif di ministry ini. Tambahkan dulu di menu Pelayan.' : 'Pilih Ministry terlebih dahulu.';
-      return 'Belum ada data. Tambahkan dulu di menu terkait.';
+      const names = { sector: 'Sektor MK', ministry: 'Ministry', service: 'Jadwal Ibadah', asset: 'Aset', facility: 'Fasilitas', role: 'Role' };
+      return 'Belum ada data. Tambahkan dulu di menu ' + (names[f.ref] || 'terkait') + '.';
     },
     onPick: function(id, item) {
       (f.clears || []).forEach(function(k) {
