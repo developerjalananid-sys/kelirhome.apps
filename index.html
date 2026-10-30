@@ -1008,6 +1008,9 @@
     .ms-item .ms-meta { color: var(--text-light); font-size: 12px; white-space: nowrap; }
     .ms-empty, .ms-more { padding: 10px 12px; font-size: 12px; color: var(--text-light); }
     .ms-wrap.ms-disabled { opacity: 0.5; pointer-events: none; }
+    .ms-item .ms-name { min-width: 0; overflow-wrap: anywhere; }
+    .ms-item .ms-meta { white-space: normal; text-align: right; }
+    input[readonly].ro-field { background: var(--bg); color: var(--text-light); }
 
     .info-banner { background: #fff8e1; border: 1px solid #ffe082; color: #6d4c00; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
 
@@ -1193,6 +1196,9 @@ const APP = {
   memberOptions: null,
   memberMap: {},
   memberOptionsLoaded: false,
+  refData: {},
+  refMap: {},
+  refLoaded: false,
   pendingRegId: null,
   pendingRegs: []
 };
@@ -2099,7 +2105,7 @@ function loadGridData(id) {
   const config = getGridConfig(id);
   if (!config) return;
 
-  if (!APP.memberOptionsLoaded && !isJemaat()) { ensureMemberOptions(function() { loadGridData(id); }); return; }
+  if ((!APP.memberOptionsLoaded || !APP.refLoaded) && !isJemaat()) { ensureMemberOptions(function() { loadGridData(id); }); return; }
 
   const params = {
     page: state.page,
@@ -2453,6 +2459,8 @@ function getGridConfig(id) {
         { key: 'service_date', label: 'Tanggal', format: formatDate },
         { key: 'service_type', label: 'Tipe' },
         { key: 'service_name', label: 'Nama Ibadah' },
+        { key: 'start_time', label: 'Jam Mulai', format: formatTimeOnly },
+        { key: 'end_time', label: 'Jam Selesai', format: formatTimeOnly },
         { key: 'status', label: 'Status', badge: v => v === 'COMPLETED' ? 'badge-success' : v === 'ONGOING' ? 'badge-warning' : 'badge-secondary' },
         { key: 'leader', label: 'Pemimpin' }
       ],
@@ -2462,8 +2470,8 @@ function getGridConfig(id) {
         { key: 'service_type', label: 'Jenis', type: 'select', options: [{value:'RAYA',label:'Ibadah Raya'},{value:'ANAK',label:'Ibadah Anak'},{value:'YOUTH',label:'Youth'},{value:'TEENS',label:'Teens'},{value:'PRIA',label:'Ibadah Pria'},{value:'WANITA',label:'Ibadah Wanita'},{value:'KELUARGA',label:'Ibadah Keluarga'},{value:'S2C',label:'S2C'},{value:'DOA',label:'Doa'},{value:'EVENT',label:'Event Khusus'}] },
         { key: 'service_name', label: 'Nama Ibadah' },
         { key: 'location', label: 'Lokasi' },
-        { key: 'start_time', label: 'Mulai' },
-        { key: 'end_time', label: 'Selesai' },
+        { key: 'start_time', label: 'Jam Mulai', type: 'time' },
+        { key: 'end_time', label: 'Jam Selesai', type: 'time' },
         { key: 'leader', label: 'Pemimpin' },
         { key: 'theme', label: 'Tema' },
         { key: 'speaker', label: 'Pembicara' },
@@ -2506,7 +2514,7 @@ function getGridConfig(id) {
       idField: 'id',
       title: '👤 Pelayan',
       columns: [
-        { key: 'ministry_id', label: 'Ministry ID' },
+        { key: 'ministry_id', label: 'Ministry', format: v => refCell('ministry', v) },
         { key: 'member_id', label: 'Jemaat', format: memberCell },
         { key: 'position', label: 'Posisi', badge: v => v === 'LEADER' ? 'badge-danger' : v === 'ASSISTANT' ? 'badge-warning' : 'badge-secondary' },
         { key: 'status', label: 'Status', badge: v => v === 'ACTIVE' ? 'badge-success' : v === 'ON_LEAVE' ? 'badge-warning' : 'badge-danger' },
@@ -2514,7 +2522,7 @@ function getGridConfig(id) {
       ],
       creatable: true, editable: true, deletable: true, exportable: true, searchable: true,
       createFields: [
-        { key: 'ministry_id', label: 'Ministry ID', required: true },
+        { key: 'ministry_id', label: 'Ministry (cari kode / nama)', type: 'ref-select', ref: 'ministry', required: true },
         { key: 'member_id', label: 'Jemaat (cari nama / Member ID)', type: 'member-select', required: true },
         { key: 'position', label: 'Posisi', type: 'select', options: [{value:'LEADER',label:'Ketua'},{value:'ASSISTANT',label:'Asisten'},{value:'MEMBER',label:'Anggota'}] },
         { key: 'status', label: 'Status', type: 'select', options: [{value:'ACTIVE',label:'Aktif'},{value:'INACTIVE',label:'Tidak Aktif'},{value:'ON_LEAVE',label:'Cuti'}] },
@@ -2528,18 +2536,20 @@ function getGridConfig(id) {
       title: 'Jadwal Pelayanan',
       columns: [
         { key: 'service_date', label: 'Tanggal', format: formatDate },
-        { key: 'member_id', label: 'Jemaat', format: memberCell },
-        { key: 'position', label: 'Posisi' },
+        { key: 'service_id', label: 'Ibadah', format: v => refCell('service', v) },
+        { key: 'ministry_id', label: 'Ministry', format: v => refCell('ministry', v) },
+        { key: 'member_id', label: 'Pelayan', format: memberCell },
+        { key: 'position', label: 'Posisi / Tugas' },
         { key: 'status', label: 'Status', badge: v => v === 'SCHEDULED' ? 'badge-success' : v === 'CANCELLED' ? 'badge-danger' : 'badge-warning' },
         { key: 'confirmation_status', label: 'Konfirmasi', badge: v => v === 'CONFIRMED' ? 'badge-success' : v === 'DECLINED' ? 'badge-danger' : 'badge-warning' }
       ],
       creatable: true, editable: true, deletable: true, exportable: true,
       createFields: [
-        { key: 'service_date', label: 'Tanggal', type: 'date', required: true },
-        { key: 'service_id', label: 'Service ID' },
-        { key: 'ministry_id', label: 'Ministry ID', required: true },
-        { key: 'member_id', label: 'Jemaat (cari nama / Member ID)', type: 'member-select', required: true },
-        { key: 'position', label: 'Posisi' },
+        { key: 'service_id', label: 'Jadwal Ibadah (cari kode / nama / tanggal)', type: 'ref-select', ref: 'service', required: true, fill: { service_date: 'date' }, full: true },
+        { key: 'service_date', label: 'Tanggal Ibadah (otomatis dari jadwal ibadah)', type: 'date', readonly: true },
+        { key: 'ministry_id', label: 'Ministry (cari kode / nama)', type: 'ref-select', ref: 'ministry', required: true, clears: ['member_id'] },
+        { key: 'member_id', label: 'Pelayan (hanya pelayan aktif di ministry terpilih)', type: 'ref-select', ref: 'ministryMember', dependsOn: 'ministry_id', required: true, full: true },
+        { key: 'position', label: 'Posisi / Tugas' },
         { key: 'status', label: 'Status', type: 'select', options: [{value:'SCHEDULED',label:'Terjadwal'},{value:'CHANGED',label:'Diubah'},{value:'CANCELLED',label:'Dibatalkan'}] },
         { key: 'confirmation_status', label: 'Konfirmasi', type: 'select', options: [{value:'PENDING',label:'Pending'},{value:'CONFIRMED',label:'Dikonfirmasi'},{value:'DECLINED',label:'Ditolak'}] }
       ]
@@ -2571,14 +2581,14 @@ function getGridConfig(id) {
       idField: 'id',
       title: 'Anggota MK',
       columns: [
-        { key: 'sector_id', label: 'Sektor' },
+        { key: 'sector_id', label: 'Sektor', format: v => refCell('sector', v) },
         { key: 'member_id', label: 'Jemaat', format: memberCell },
         { key: 'join_date', label: 'Bergabung', format: formatDate },
         { key: 'status', label: 'Status', badge: v => v === 'ACTIVE' ? 'badge-success' : 'badge-danger' }
       ],
       creatable: true, editable: true, deletable: true, exportable: true,
       createFields: [
-        { key: 'sector_id', label: 'Sektor ID', required: true },
+        { key: 'sector_id', label: 'Sektor (cari kode / nama)', type: 'ref-select', ref: 'sector', required: true },
         { key: 'member_id', label: 'Jemaat (cari nama / Member ID)', type: 'member-select', required: true },
         { key: 'join_date', label: 'Tanggal Bergabung', type: 'date' },
         { key: 'status', label: 'Status', type: 'select', options: [{value:'ACTIVE',label:'Aktif'},{value:'INACTIVE',label:'Tidak Aktif'}] }
@@ -2590,8 +2600,8 @@ function getGridConfig(id) {
       title: 'Event',
       columns: [
         { key: 'event_name', label: 'Nama Event' },
-        { key: 'start_date', label: 'Mulai', format: formatDate },
-        { key: 'end_date', label: 'Selesai', format: formatDate },
+        { key: 'start_date', label: 'Mulai', format: formatDateTime },
+        { key: 'end_date', label: 'Selesai', format: formatDateTime },
         { key: 'status', label: 'Status', badge: v => v === 'COMPLETED' ? 'badge-success' : v === 'ONGOING' ? 'badge-warning' : 'badge-secondary' },
         { key: 'location', label: 'Lokasi' }
       ],
@@ -2599,8 +2609,8 @@ function getGridConfig(id) {
       createFields: [
         { key: 'event_name', label: 'Nama Event', required: true },
         { key: 'event_type', label: 'Tipe' },
-        { key: 'start_date', label: 'Mulai', type: 'date' },
-        { key: 'end_date', label: 'Selesai', type: 'date' },
+        { key: 'start_date', label: 'Tanggal & Jam Mulai', type: 'datetime-local' },
+        { key: 'end_date', label: 'Tanggal & Jam Selesai', type: 'datetime-local' },
         { key: 'location', label: 'Lokasi' },
         { key: 'leader', label: 'Penanggung Jawab' },
         { key: 'capacity', label: 'Kapasitas', type: 'number' },
@@ -2688,8 +2698,8 @@ function getGridConfig(id) {
       createFields: [
         { key: 'project_name', label: 'Nama Project', required: true },
         { key: 'description', label: 'Deskripsi', type: 'textarea' },
-        { key: 'start_date', label: 'Mulai', type: 'date' },
-        { key: 'target_date', label: 'Target', type: 'date' },
+        { key: 'start_date', label: 'Tanggal Mulai', type: 'date' },
+        { key: 'target_date', label: 'Tanggal Target Selesai', type: 'date' },
         { key: 'budget', label: 'Budget', type: 'number' },
         { key: 'status', label: 'Status', type: 'select', options: [{value:'PLANNING',label:'Perencanaan'},{value:'IN_PROGRESS',label:'Proses'},{value:'COMPLETED',label:'Selesai'},{value:'ON_HOLD',label:'Ditahan'},{value:'CANCELLED',label:'Dibatalkan'}] },
         { key: 'leader', label: 'Penanggung Jawab' }
@@ -2741,7 +2751,7 @@ function getGridConfig(id) {
       columns: [
         { key: 'username', label: 'Username' },
         { key: 'full_name', label: 'Nama' },
-        { key: 'role_id', label: 'Role' },
+        { key: 'role_id', label: 'Role', format: v => refCell('role', v) },
         { key: 'status', label: 'Status', badge: v => v === 'ACTIVE' ? 'badge-success' : v === 'LOCKED' ? 'badge-danger' : 'badge-warning' },
         { key: 'last_login', label: 'Login Terakhir', format: formatDateTime }
       ],
@@ -2752,7 +2762,7 @@ function getGridConfig(id) {
         { key: 'password', label: 'Password Login (min. 8 karakter)', editLabel: 'Password Baru (kosongkan jika tidak diubah)', type: 'password', required: true, placeholder: 'Minimal 8 karakter' },
         { key: 'password_confirm', label: 'Konfirmasi Password', editLabel: 'Konfirmasi Password Baru', type: 'password', required: true, placeholder: 'Ulangi password' },
         { key: 'phone', label: 'Telepon' },
-        { key: 'role_id', label: 'Role ID' },
+        { key: 'role_id', label: 'Role (cari kode / nama)', type: 'ref-select', ref: 'role' },
         { key: 'status', label: 'Status', type: 'select', options: [{value:'ACTIVE',label:'Aktif'},{value:'REQUIRES_PASSWORD_SETUP',label:'Wajib ganti password saat login pertama'},{value:'INACTIVE',label:'Tidak Aktif'},{value:'LOCKED',label:'Terkunci'}] }
       ]
     },
@@ -2777,13 +2787,14 @@ function getGridConfig(id) {
       title: 'Maintenance',
       columns: [
         { key: 'maintenance_date', label: 'Tanggal', format: formatDate },
+        { key: 'asset_id', label: 'Aset', format: v => refCell('asset', v) },
         { key: 'maintenance_type', label: 'Tipe' },
         { key: 'description', label: 'Deskripsi' },
         { key: 'status', label: 'Status', badge: v => v === 'DONE' ? 'badge-success' : v === 'IN_PROGRESS' ? 'badge-warning' : 'badge-secondary' }
       ],
       creatable: true, editable: true, deletable: true, exportable: true,
       createFields: [
-        { key: 'asset_id', label: 'Asset ID', required: true },
+        { key: 'asset_id', label: 'Aset (cari kode / nama)', type: 'ref-select', ref: 'asset', required: true },
         { key: 'maintenance_date', label: 'Tanggal', type: 'date' },
         { key: 'maintenance_type', label: 'Tipe', type: 'select', options: [{value:'ROUTINE',label:'Rutin'},{value:'REPAIR',label:'Perbaikan'},{value:'REPLACEMENT',label:'Penggantian'}] },
         { key: 'description', label: 'Deskripsi' },
@@ -2798,16 +2809,18 @@ function getGridConfig(id) {
       title: 'Booking Fasilitas',
       columns: [
         { key: 'booking_date', label: 'Tanggal', format: formatDate },
-        { key: 'facility_id', label: 'Fasilitas' },
+        { key: 'facility_id', label: 'Fasilitas', format: v => refCell('facility', v) },
+        { key: 'start_time', label: 'Jam Mulai', format: formatTimeOnly },
+        { key: 'end_time', label: 'Jam Selesai', format: formatTimeOnly },
         { key: 'purpose', label: 'Tujuan' },
         { key: 'status', label: 'Status', badge: v => v === 'APPROVED' ? 'badge-success' : v === 'PENDING' ? 'badge-warning' : 'badge-danger' }
       ],
       creatable: true, editable: true, deletable: true, exportable: true,
       createFields: [
-        { key: 'facility_id', label: 'Fasilitas ID', required: true },
-        { key: 'booking_date', label: 'Tanggal', type: 'date' },
-        { key: 'start_time', label: 'Mulai' },
-        { key: 'end_time', label: 'Selesai' },
+        { key: 'facility_id', label: 'Fasilitas (cari kode / nama)', type: 'ref-select', ref: 'facility', required: true },
+        { key: 'booking_date', label: 'Tanggal Booking', type: 'date' },
+        { key: 'start_time', label: 'Jam Mulai', type: 'time' },
+        { key: 'end_time', label: 'Jam Selesai', type: 'time' },
         { key: 'purpose', label: 'Tujuan' },
         { key: 'requester', label: 'Peminta' },
         { key: 'status', label: 'Status', type: 'select', options: [{value:'PENDING',label:'Pending'},{value:'APPROVED',label:'Disetujui'},{value:'REJECTED',label:'Ditolak'},{value:'CANCELLED',label:'Dibatalkan'}] }
@@ -2822,9 +2835,12 @@ function getGridConfig(id) {
 // 13. CRUD OPERATIONS - FIXED FOR ALL MODULES
 // ================================================================
 
+// Menu yang datanya dipakai sebagai pilihan dropdown di form lain: setelah berubah, daftar pilihan dimuat ulang.
+const REF_SOURCE_GRIDS = ['members', 'ministries', 'ministry_members', 'services', 's2c_sectors', 'assets', 'facilities', 'roles'];
+
 function refreshGrid(id) {
-  if (id === 'members') ensureMemberOptions(null, true);
   APP.dataGrids[id].page = 1;
+  if (REF_SOURCE_GRIDS.indexOf(id) !== -1) { ensureMemberOptions(function() { loadGridData(id); }, true); return; }
   loadGridData(id);
 }
 
@@ -2878,7 +2894,7 @@ function showCreateForm(id, prefill, hintHtml) {
     fieldsHtml = config.createFields.map(f => `
       <div class="form-group ${f.full ? 'full' : ''}">
         <label>${f.label}</label>
-        ${f.type === 'member-select' ? buildMemberSelectHtml('cf', f, '') : f.type === 'select' ? `
+        ${(f.type === 'member-select' || f.type === 'ref-select') ? buildMemberSelectHtml('cf', f, '') : f.type === 'select' ? `
           <select id="cf_${f.key}" ${f.required ? 'required' : ''} ${f.onchange ? `onchange="${f.onchange}"` : ''}>
             ${buildSelectOptionsHtml(id, f, '')}
           </select>
@@ -2889,7 +2905,7 @@ function showCreateForm(id, prefill, hintHtml) {
         ` : f.type === 'textarea' ? `
           <textarea id="cf_${f.key}" ${f.required ? 'required' : ''}></textarea>
         ` : `
-          <input type="${f.type || 'text'}" id="cf_${f.key}" ${f.required ? 'required' : ''} ${f.type === 'password' ? 'autocomplete="new-password"' : ''} ${f.placeholder ? 'placeholder="' + f.placeholder + '"' : ''}>
+          <input type="${f.type || 'text'}" id="cf_${f.key}" ${f.required ? 'required' : ''} ${f.readonly ? 'readonly class="ro-field"' : ''} ${f.type === 'password' ? 'autocomplete="new-password"' : ''} ${f.placeholder ? 'placeholder="' + f.placeholder + '"' : ''}>
         `}
       </div>
     `).join('');
@@ -2947,7 +2963,7 @@ function submitCreateForm(id) {
   if (config.createFields) {
     for (const f of config.createFields) {
       const el = document.getElementById('cf_' + f.key);
-      if (el) data[f.key] = el.value;
+      if (el) data[f.key] = formFieldValue(f, el.value);
     }
   }
 
@@ -3019,7 +3035,7 @@ function submitCreateForm(id) {
     })
     .withFailureHandler(function(err) {
       hideLoading();
-      showToast('Terjadi kesalahan: ' + err.message, 'error');
+      handleServerError(err, 'Terjadi kesalahan.');
       console.error(err);
     })
     [funcName](APP.sessionToken, data);
@@ -3092,7 +3108,7 @@ function showEditForm(id, record) {
     fieldsHtml = config.createFields.map(f => `
       <div class="form-group ${f.full ? 'full' : ''}">
         <label>${f.editLabel || f.label}</label>
-        ${f.type === 'member-select' ? buildMemberSelectHtml('ef', f, record[f.key]) : f.type === 'select' ? `
+        ${(f.type === 'member-select' || f.type === 'ref-select') ? buildMemberSelectHtml('ef', f, record[f.key]) : f.type === 'select' ? `
           <select id="ef_${f.key}" ${f.required ? 'required' : ''} ${f.onchange ? `onchange="${f.onchange}"` : ''}>
             ${buildSelectOptionsHtml(id, f, record[f.key])}
           </select>
@@ -3103,7 +3119,7 @@ function showEditForm(id, record) {
         ` : f.type === 'textarea' ? `
           <textarea id="ef_${f.key}" ${f.required ? 'required' : ''}>${escapeHtml(record[f.key])}</textarea>
         ` : `
-          <input type="${f.type || 'text'}" id="ef_${f.key}" value="${f.type === 'password' ? '' : escapeHtml(f.type === 'date' ? toDateInputValue(record[f.key]) : record[f.key])}" ${f.required && f.type !== 'password' ? 'required' : ''} ${f.type === 'password' ? 'autocomplete="new-password"' : ''} ${f.placeholder ? 'placeholder="' + f.placeholder + '"' : ''}>
+          <input type="${f.type || 'text'}" id="ef_${f.key}" value="${escapeHtml(fieldInputValue(f, record[f.key]))}" ${f.required && f.type !== 'password' ? 'required' : ''} ${f.readonly ? 'readonly class="ro-field"' : ''} ${f.type === 'password' ? 'autocomplete="new-password"' : ''} ${f.placeholder ? 'placeholder="' + f.placeholder + '"' : ''}>
         `}
       </div>
     `).join('');
@@ -3148,7 +3164,7 @@ function submitEditForm(id, recordId) {
   if (config.createFields) {
     for (const f of config.createFields) {
       const el = document.getElementById('ef_' + f.key);
-      if (el) data[f.key] = el.value;
+      if (el) data[f.key] = formFieldValue(f, el.value);
     }
   }
 
@@ -3207,7 +3223,7 @@ function submitEditForm(id, recordId) {
     })
     .withFailureHandler(function(err) {
       hideLoading();
-      showToast('Terjadi kesalahan.', 'error');
+      handleServerError(err, 'Terjadi kesalahan.');
       console.error(err);
     })
     [funcName](APP.sessionToken, recordId, data);
@@ -4488,7 +4504,7 @@ document.getElementById('loginPassword').addEventListener('keydown', function(e)
 function initializeApp() {
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('appContainer').style.display = 'flex';
-  APP.memberOptions = null; APP.memberMap = {}; APP.memberOptionsLoaded = false;
+  APP.memberOptions = null; APP.memberMap = {}; APP.memberOptionsLoaded = false; APP.refData = {}; APP.refMap = {}; APP.refLoaded = false;
   document.body.classList.toggle('is-jemaat', isJemaat());
   if (isJemaat()) {
     APP.currentPage = 'my_checkin';
@@ -4611,21 +4627,40 @@ const CHECKIN_METHOD_LABELS = { SELF: 'Mandiri', HEAD: 'Kepala Keluarga', USHER:
 
 function ensureMemberOptions(cb, force) {
   if (isJemaat()) { if (cb) cb(); return; }
-  if (APP.memberOptionsLoaded && !force) { if (cb) cb(); return; }
+  if (APP.memberOptionsLoaded && APP.refLoaded && !force) { if (cb) cb(); return; }
+  let pending = 2;
+  const done = function() { pending--; if (pending === 0 && cb) cb(); };
   google.script.run
     .withSuccessHandler(function(list) {
       APP.memberOptions = list || [];
       APP.memberMap = {};
       APP.memberOptions.forEach(m => { APP.memberMap[m.member_id] = m; });
       APP.memberOptionsLoaded = true;
-      if (cb) cb();
+      done();
     })
     .withFailureHandler(function(err) {
       console.error(err);
       APP.memberOptionsLoaded = true; // jangan loop; form tetap bisa dibuka
-      if (cb) cb();
+      done();
     })
     .getMemberOptions(APP.sessionToken);
+  google.script.run
+    .withSuccessHandler(function(data) {
+      APP.refData = data || {};
+      APP.refMap = {};
+      ['sector', 'ministry', 'service', 'asset', 'facility', 'role'].forEach(function(t) {
+        APP.refMap[t] = {};
+        (APP.refData[t] || []).forEach(function(r) { APP.refMap[t][r.id] = r.label; });
+      });
+      APP.refLoaded = true;
+      done();
+    })
+    .withFailureHandler(function(err) {
+      console.error(err);
+      APP.refLoaded = true;
+      done();
+    })
+    .getRefOptions(APP.sessionToken);
 }
 
 // Nama + ID untuk sel tabel (kolom yang sebelumnya hanya menampilkan Member ID mentah).
@@ -4639,6 +4674,78 @@ function memberCell(v) {
 
 function memberOptionLabel(m) { return (m.full_name || '(tanpa nama)') + ' — ' + m.member_id; }
 
+// ---------- Referensi ID (sektor, ministry, jadwal ibadah, aset, fasilitas, role) ----------
+const POSITION_LABELS = { LEADER: 'Ketua', ASSISTANT: 'Asisten', MEMBER: 'Anggota' };
+
+function refLabel(type, id) {
+  if (!id) return '';
+  const m = APP.refMap && APP.refMap[type];
+  return (m && m[id]) ? m[id] : id;
+}
+
+// Sel tabel: "KODE - Nama" (bukan ID mentah).
+function refCell(type, v) {
+  return v ? escapeHtml(refLabel(type, v)) : '-';
+}
+
+function refItems(type) {
+  return ((APP.refData && APP.refData[type]) || []).map(function(r) {
+    return { id: r.id, name: r.label, meta: r.meta || '', label: r.label, date: r.date || '', hay: (r.label + ' ' + (r.meta || '') + ' ' + (r.date || '')).toLowerCase() };
+  });
+}
+
+// Pelayan aktif pada satu ministry (untuk Jadwal Pelayanan).
+function ministryMemberItems(ministryId) {
+  if (!ministryId) return [];
+  return ((APP.refData && APP.refData.ministryMembers) || [])
+    .filter(function(x) { return x.ministry_id === ministryId; })
+    .map(function(x) {
+      const m = (APP.memberMap || {})[x.member_id];
+      const name = m ? m.full_name : x.member_id;
+      return {
+        id: x.member_id, name: name,
+        meta: x.member_id + ' · ' + (POSITION_LABELS[x.position] || x.position || ''),
+        label: m ? memberOptionLabel(m) : x.member_id,
+        hay: (name + ' ' + x.member_id + ' ' + (m ? (m.member_code || '') : '')).toLowerCase()
+      };
+    });
+}
+
+// ---------- Tanggal & jam ----------
+function toTimeInputValue(v) {
+  const m = String(v === undefined || v === null ? '' : v).match(/(\d{1,2}):(\d{2})/);
+  return m ? m[1].padStart(2, '0') + ':' + m[2] : '';
+}
+
+function formatTimeOnly(v) {
+  return toTimeInputValue(v) || '-';
+}
+
+// Untuk <input type="datetime-local"> (yyyy-mm-ddThh:mm). Data lama yang hanya tanggal diberi jam 00:00.
+function toDateTimeInputValue(v) {
+  if (v === undefined || v === null || v === '') return '';
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0') + 'T' + (m[4] || '0').padStart(2, '0') + ':' + (m[5] || '00');
+  m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) return m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') + 'T' + (m[4] || '0').padStart(2, '0') + ':' + (m[5] || '00');
+  return '';
+}
+
+function fieldInputValue(f, v) {
+  if (f.type === 'password') return '';
+  if (f.type === 'date') return toDateInputValue(v);
+  if (f.type === 'time') return toTimeInputValue(v);
+  if (f.type === 'datetime-local') return toDateTimeInputValue(v);
+  return (v === undefined || v === null) ? '' : v;
+}
+
+// Nilai yang dikirim ke server: tanggal-jam disimpan sebagai "yyyy-mm-dd hh:mm".
+function formFieldValue(f, v) {
+  if (f.type === 'datetime-local') return String(v || '').replace('T', ' ');
+  return v;
+}
+
 function buildMemberSelectHtml(prefix, f, currentValue) {
   const id = prefix + '_' + f.key;
   return '<div class="ms-wrap" id="' + id + '_wrap">' +
@@ -4649,10 +4756,11 @@ function buildMemberSelectHtml(prefix, f, currentValue) {
     '</div>';
 }
 
-// Dropdown yang bisa dicari: nilai tersimpan di <input hidden id="..."> sehingga kode
-// form lama (document.getElementById(...).value) tetap bekerja tanpa perubahan.
-function initMemberSelect(inputId, opts) {
-  opts = opts || {};
+// Dropdown yang bisa dicari (jemaat dan semua referensi ID). Nilai tersimpan di <input hidden id="...">
+// sehingga kode form lama (document.getElementById(...).value) tetap bekerja tanpa perubahan.
+// cfg: { pool: () => [{id,name,meta,label,hay}], loaded: () => bool, labelOf: id => teks,
+//        emptyText: () => teks, onPick: (id, item) => void }
+function initPicker(inputId, cfg) {
   const hidden = document.getElementById(inputId);
   const q = document.getElementById(inputId + '__q');
   const list = document.getElementById(inputId + '__list');
@@ -4662,16 +4770,9 @@ function initMemberSelect(inputId, opts) {
   let active = -1;
   let shown = [];
 
-  function pool() {
-    let arr = APP.memberOptions || [];
-    if (opts.filter === 'heads') arr = arr.filter(m => m.family_relation === 'KEPALA_KELUARGA');
-    if (opts.excludeId) arr = arr.filter(m => m.member_id !== opts.excludeId);
-    return arr;
-  }
   function setValue(id) {
     hidden.value = id || '';
-    const m = id ? (APP.memberMap || {})[id] : null;
-    q.value = id ? (m ? memberOptionLabel(m) : id) : '';
+    q.value = id ? cfg.labelOf(id) : '';
     q.dataset.selected = id ? '1' : '';
     clr.style.display = id ? '' : 'none';
   }
@@ -4679,24 +4780,20 @@ function initMemberSelect(inputId, opts) {
   function render() {
     const raw = (q.dataset.selected ? '' : q.value).trim().toLowerCase();
     const tokens = raw ? raw.split(/\s+/) : [];
-    let arr = pool();
-    if (tokens.length) {
-      arr = arr.filter(m => {
-        const hay = ((m.full_name || '') + ' ' + (m.nickname || '') + ' ' + m.member_id + ' ' + (m.member_code || '') + ' ' + (m.phone || '')).toLowerCase();
-        return tokens.every(t => hay.indexOf(t) !== -1);
-      });
-    }
+    let arr = cfg.pool();
+    if (tokens.length) arr = arr.filter(it => tokens.every(t => it.hay.indexOf(t) !== -1));
     shown = arr.slice(0, 50);
     if (active >= shown.length) active = shown.length ? 0 : -1;
-    if (!APP.memberOptionsLoaded) {
-      list.innerHTML = '<div class="ms-empty">Memuat daftar jemaat…</div>';
+    if (!cfg.loaded()) {
+      list.innerHTML = '<div class="ms-empty">Memuat daftar…</div>';
     } else if (!shown.length) {
-      list.innerHTML = '<div class="ms-empty">Tidak ada jemaat yang cocok.</div>';
+      const msg = (!tokens.length && cfg.emptyText) ? cfg.emptyText() : 'Tidak ada data yang cocok.';
+      list.innerHTML = '<div class="ms-empty">' + escapeHtml(msg) + '</div>';
     } else {
-      list.innerHTML = shown.map((m, i) =>
-        '<div class="ms-item' + (i === active ? ' active' : '') + '" data-id="' + escapeHtml(m.member_id) + '">' +
-          '<span class="ms-name">' + escapeHtml(m.full_name || '(tanpa nama)') + '</span>' +
-          '<span class="ms-meta">' + escapeHtml(m.member_id) + (m.family_relation === 'KEPALA_KELUARGA' ? ' · KK' : '') + (m.status === 'INACTIVE' ? ' · nonaktif' : '') + '</span>' +
+      list.innerHTML = shown.map((it, i) =>
+        '<div class="ms-item' + (i === active ? ' active' : '') + '" data-id="' + escapeHtml(it.id) + '">' +
+          '<span class="ms-name">' + escapeHtml(it.name) + '</span>' +
+          '<span class="ms-meta">' + escapeHtml(it.meta || '') + '</span>' +
         '</div>'
       ).join('') + (arr.length > shown.length ? '<div class="ms-more">' + (arr.length - shown.length) + ' lainnya — ketik untuk mempersempit</div>' : '');
     }
@@ -4708,12 +4805,18 @@ function initMemberSelect(inputId, opts) {
     const el = items[active];
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
   }
-  function choose(id) { setValue(id); close(); q.blur(); }
+  function choose(id) {
+    setValue(id); close(); q.blur();
+    if (cfg.onPick) cfg.onPick(id, shown.find(x => x.id === id) || null);
+  }
 
   q.addEventListener('focus', function() { if (q.dataset.selected) q.select(); active = -1; render(); });
   q.addEventListener('click', function() { if (list.style.display === 'none') render(); });
   q.addEventListener('input', function() {
-    if (q.dataset.selected) { q.dataset.selected = ''; hidden.value = ''; clr.style.display = 'none'; }
+    if (q.dataset.selected) {
+      q.dataset.selected = ''; hidden.value = ''; clr.style.display = 'none';
+      if (cfg.onPick) cfg.onPick('', null);
+    }
     active = 0;
     render();
   });
@@ -4726,7 +4829,7 @@ function initMemberSelect(inputId, opts) {
       e.preventDefault(); active = Math.max(active - 1, 0); highlight();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (list.style.display !== 'none' && active >= 0 && shown[active]) choose(shown[active].member_id);
+      if (list.style.display !== 'none' && active >= 0 && shown[active]) choose(shown[active].id);
     } else if (e.key === 'Escape') { close(); }
   });
   q.addEventListener('blur', function() {
@@ -4738,7 +4841,12 @@ function initMemberSelect(inputId, opts) {
     const item = e.target.closest('.ms-item');
     if (item) choose(item.getAttribute('data-id'));
   });
-  clr.addEventListener('mousedown', function(e) { e.preventDefault(); setValue(''); q.focus(); });
+  clr.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    setValue('');
+    if (cfg.onPick) cfg.onPick('', null);
+    q.focus();
+  });
 
   hidden._ms = {
     setValue: setValue,
@@ -4747,14 +4855,72 @@ function initMemberSelect(inputId, opts) {
   setValue(hidden.value);
 }
 
+function memberItem(m) {
+  return {
+    id: m.member_id,
+    name: m.full_name || '(tanpa nama)',
+    meta: m.member_id + (m.family_relation === 'KEPALA_KELUARGA' ? ' · KK' : '') + (m.status === 'INACTIVE' ? ' · nonaktif' : ''),
+    label: memberOptionLabel(m),
+    hay: ((m.full_name || '') + ' ' + (m.nickname || '') + ' ' + m.member_id + ' ' + (m.member_code || '') + ' ' + (m.phone || '')).toLowerCase()
+  };
+}
+
+function initMemberSelect(inputId, opts) {
+  opts = opts || {};
+  initPicker(inputId, {
+    loaded: function() { return APP.memberOptionsLoaded; },
+    pool: function() {
+      let arr = APP.memberOptions || [];
+      if (opts.filter === 'heads') arr = arr.filter(m => m.family_relation === 'KEPALA_KELUARGA');
+      if (opts.excludeId) arr = arr.filter(m => m.member_id !== opts.excludeId);
+      return arr.map(memberItem);
+    },
+    labelOf: function(id) { const m = (APP.memberMap || {})[id]; return m ? memberOptionLabel(m) : id; }
+  });
+}
+
+// Dropdown untuk field ber-ID selain jemaat. f.ref = sector | ministry | service | asset | facility | role | ministryMember.
+// f.dependsOn: pilihan bergantung pada field lain (mis. pelayan menurut ministry).
+// f.clears: field lain yang dikosongkan saat pilihan berubah. f.fill: { field_lain: 'properti item' } diisi otomatis.
+function initRefSelect(prefix, f) {
+  const inputId = prefix + '_' + f.key;
+  const isMM = f.ref === 'ministryMember';
+  const depValue = function() { const d = document.getElementById(prefix + '_' + f.dependsOn); return d ? d.value : ''; };
+  initPicker(inputId, {
+    loaded: function() { return APP.refLoaded && APP.memberOptionsLoaded; },
+    pool: function() { return isMM ? ministryMemberItems(depValue()) : refItems(f.ref); },
+    labelOf: function(id) {
+      if (isMM) { const m = (APP.memberMap || {})[id]; return m ? memberOptionLabel(m) : id; }
+      return refLabel(f.ref, id);
+    },
+    emptyText: function() {
+      if (isMM) return depValue() ? 'Belum ada pelayan aktif di ministry ini. Tambahkan dulu di menu Pelayan.' : 'Pilih Ministry terlebih dahulu.';
+      return 'Belum ada data. Tambahkan dulu di menu terkait.';
+    },
+    onPick: function(id, item) {
+      (f.clears || []).forEach(function(k) {
+        const el = document.getElementById(prefix + '_' + k);
+        if (el && el._ms) el._ms.setValue('');
+      });
+      Object.keys(f.fill || {}).forEach(function(k) {
+        const el = document.getElementById(prefix + '_' + k);
+        if (el) el.value = (id && item) ? (item[f.fill[k]] || '') : '';
+      });
+    }
+  });
+}
+
 function initMemberSelects(prefix, config, record) {
   if (!config || !config.createFields) return;
   config.createFields.forEach(f => {
-    if (f.type !== 'member-select') return;
-    initMemberSelect(prefix + '_' + f.key, {
-      filter: f.filter,
-      excludeId: (f.excludeSelf && record) ? record.member_id : ''
-    });
+    if (f.type === 'member-select') {
+      initMemberSelect(prefix + '_' + f.key, {
+        filter: f.filter,
+        excludeId: (f.excludeSelf && record) ? record.member_id : ''
+      });
+    } else if (f.type === 'ref-select') {
+      initRefSelect(prefix, f);
+    }
   });
 }
 
@@ -4764,7 +4930,7 @@ function applyCreatePrefill(config, prefill) {
     if (v === undefined || v === null || v === '') return;
     const el = document.getElementById('cf_' + f.key);
     if (!el) return;
-    if (f.type === 'member-select') { if (el._ms) el._ms.setValue(v); return; }
+    if (f.type === 'member-select' || f.type === 'ref-select') { if (el._ms) el._ms.setValue(v); return; }
     if (f.type === 'date') { el.value = toDateInputValue(v); return; }
     if (el.tagName === 'SELECT' && !Array.from(el.options).some(o => o.value === String(v))) {
       const o = document.createElement('option');
